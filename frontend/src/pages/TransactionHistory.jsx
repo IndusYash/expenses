@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import AddTransactionModal from '../components/AddTransactionModal'
+import { transactionAPI } from '../services/api'
 
 function TransactionHistory() {
   const [transactions, setTransactions] = useState([])
   const [filteredTransactions, setFilteredTransactions] = useState([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState(null)
+  const [selectedReceipt, setSelectedReceipt] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState({
     type: 'all',
     category: 'all',
@@ -13,14 +16,23 @@ function TransactionHistory() {
     dateTo: ''
   })
 
+  // Load transactions from backend
   useEffect(() => {
-    const saved = localStorage.getItem('transactions')
-    if (saved) {
-      const parsed = JSON.parse(saved)
-      setTransactions(parsed)
-      setFilteredTransactions(parsed)
-    }
+    fetchTransactions()
   }, [])
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true)
+      const response = await transactionAPI.getAll()
+      setTransactions(response.data)
+      setFilteredTransactions(response.data)
+    } catch (err) {
+      console.error('Failed to load transactions:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     let filtered = [...transactions]
@@ -47,11 +59,14 @@ function TransactionHistory() {
     setFilteredTransactions(filtered)
   }, [transactions, filters])
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this transaction?')) {
-      const updated = transactions.filter(t => t.id !== id)
-      setTransactions(updated)
-      localStorage.setItem('transactions', JSON.stringify(updated))
+      try {
+        await transactionAPI.delete(id)
+        setTransactions(transactions.filter(t => t._id !== id))
+      } catch (err) {
+        alert('Failed to delete transaction: ' + (err.response?.data?.message || err.message))
+      }
     }
   }
 
@@ -60,27 +75,24 @@ function TransactionHistory() {
     setIsModalOpen(true)
   }
 
-  const handleAddOrUpdate = (transaction) => {
-    if (editingTransaction) {
-      // Update existing
-      const updated = transactions.map(t => 
-        t.id === editingTransaction.id ? { ...transaction, id: editingTransaction.id } : t
-      )
-      setTransactions(updated)
-      localStorage.setItem('transactions', JSON.stringify(updated))
-      setEditingTransaction(null)
-    } else {
-      // Add new
-      const newTransaction = {
-        ...transaction,
-        id: Date.now(),
-        date: transaction.date || new Date().toISOString().slice(0, 10)
+  const handleAddOrUpdate = async (transaction) => {
+    try {
+      if (editingTransaction) {
+        // Update existing
+        const response = await transactionAPI.update(editingTransaction._id, transaction)
+        setTransactions(transactions.map(t =>
+          t._id === editingTransaction._id ? response.data : t
+        ))
+        setEditingTransaction(null)
+      } else {
+        // Add new
+        const response = await transactionAPI.create(transaction)
+        setTransactions([response.data, ...transactions])
       }
-      const updated = [newTransaction, ...transactions]
-      setTransactions(updated)
-      localStorage.setItem('transactions', JSON.stringify(updated))
+      setIsModalOpen(false)
+    } catch (err) {
+      alert('Failed to save transaction: ' + (err.response?.data?.message || err.message))
     }
-    setIsModalOpen(false)
   }
 
   const handleCloseModal = () => {
@@ -92,10 +104,10 @@ function TransactionHistory() {
 
   return (
     <div className="w-full">
-      <div className="flex justify-between items-center mb-8 md:flex-row flex-col md:items-center items-start gap-4">
-        <h1 className="text-gray-800 text-3xl font-bold">Transaction History</h1>
-        <button 
-          className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none px-6 py-3 rounded font-semibold text-base hover:shadow-lg hover:-translate-y-0.5 transition-all"
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-slate-800 text-3xl font-bold">Transaction History</h1>
+        <button
+          className="btn-primary"
           onClick={() => setIsModalOpen(true)}
         >
           + Add Transaction
@@ -103,15 +115,15 @@ function TransactionHistory() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h2 className="text-lg font-semibold mb-4 text-gray-700">Filters</h2>
+      <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm mb-6">
+        <h2 className="text-lg font-semibold mb-4 text-slate-700">Filters</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-600">Type</label>
+            <label className="form-label">Type</label>
             <select
               value={filters.type}
               onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-              className="w-full px-3 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-indigo-500"
+              className="form-select"
             >
               <option value="all">All</option>
               <option value="income">Income</option>
@@ -119,11 +131,11 @@ function TransactionHistory() {
             </select>
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-600">Category</label>
+            <label className="form-label">Category</label>
             <select
               value={filters.category}
               onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-              className="w-full px-3 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-indigo-500"
+              className="form-select"
             >
               <option value="all">All</option>
               {categories.map(cat => (
@@ -132,81 +144,96 @@ function TransactionHistory() {
             </select>
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-600">From Date</label>
+            <label className="form-label">From Date</label>
             <input
               type="date"
               value={filters.dateFrom}
               onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-              className="w-full px-3 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-indigo-500"
+              className="form-input"
             />
           </div>
           <div>
-            <label className="block mb-2 text-sm font-medium text-gray-600">To Date</label>
+            <label className="form-label">To Date</label>
             <input
               type="date"
               value={filters.dateTo}
               onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
-              className="w-full px-3 py-2 border-2 border-gray-200 rounded focus:outline-none focus:border-indigo-500"
+              className="form-input"
             />
           </div>
         </div>
       </div>
 
       {/* Transaction List */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        {filteredTransactions.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-slate-500">
+            <p className="text-lg">Loading transactions...</p>
+          </div>
+        ) : filteredTransactions.length === 0 ? (
+          <div className="p-8 text-center text-slate-500">
             <p className="text-lg">No transactions found</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Description</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Receipt</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-slate-200">
                 {filteredTransactions.map(transaction => (
-                  <tr key={transaction.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <tr key={transaction._id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {new Date(transaction.date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded ${
-                        transaction.type === 'income' 
-                          ? 'bg-green-100 text-green-800' 
+                      <span className={`px-2 py-1 text-xs font-semibold rounded ${transaction.type === 'income'
+                          ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
-                      }`}>
+                        }`}>
                         {transaction.type}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                       {transaction.category}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm text-slate-900">
                       {transaction.description}
                     </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
-                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${transaction.type === 'income' ? 'text-green-700' : 'text-red-700'
+                      }`}>
                       {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {transaction.receipt ? (
+                        <button
+                          onClick={() => setSelectedReceipt(transaction.receipt)}
+                          className="text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          View
+                        </button>
+                      ) : (
+                        <span className="text-slate-400">No receipt</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => handleEdit(transaction)}
-                        className="text-indigo-600 hover:text-indigo-900 mr-4"
+                        className="text-blue-600 hover:text-blue-800 mr-4"
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(transaction.id)}
-                        className="text-red-600 hover:text-red-900"
+                        onClick={() => handleDelete(transaction._id)}
+                        className="text-red-600 hover:text-red-800"
                       >
                         Delete
                       </button>
@@ -225,6 +252,36 @@ function TransactionHistory() {
         onAdd={handleAddOrUpdate}
         editingTransaction={editingTransaction}
       />
+
+      {/* Receipt Modal */}
+      {selectedReceipt && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 p-4"
+          onClick={() => setSelectedReceipt(null)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-3xl max-h-[90vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center p-4 border-b border-slate-200">
+              <h3 className="text-lg font-semibold text-slate-800">Receipt</h3>
+              <button
+                className="text-3xl text-slate-500 hover:text-slate-700 w-8 h-8 flex items-center justify-center"
+                onClick={() => setSelectedReceipt(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4">
+              <img
+                src={selectedReceipt}
+                alt="Receipt"
+                className="w-full h-auto"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

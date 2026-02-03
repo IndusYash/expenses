@@ -1,54 +1,71 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { authAPI } from '../services/api'
 
 function Login({ onLogin }) {
-  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   })
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
 
   const handleChange = (e) => {
+    const { name, value } = e.target
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     })
-    setError('')
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    // Dummy validation
+    setError('')
+    setLoading(true)
+
+    // Basic validation
     if (!formData.email || !formData.password) {
       setError('Please fill in all fields')
+      setLoading(false)
       return
     }
 
-    if (!formData.email.includes('@')) {
-      setError('Please enter a valid email')
+    // Simple email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address')
+      setLoading(false)
       return
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters')
-      return
-    }
+    try {
+      // Call backend API
+      const response = await authAPI.login(formData)
 
-    // Dummy login - just proceed
-    onLogin({ email: formData.email })
-    // Navigate to dashboard after successful login
-    navigate('/dashboard')
+      // Store token and user info
+      localStorage.setItem('token', response.data.token)
+      localStorage.setItem('user', JSON.stringify(response.data))
+      localStorage.setItem('isAuthenticated', 'true')
+      localStorage.setItem('userEmail', response.data.email)
+      localStorage.setItem('userName', response.data.name)
+
+      onLogin({ email: response.data.email, name: response.data.name })
+      navigate('/dashboard')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Login failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gradient-to-r from-indigo-500 to-purple-600 p-8">
-      <div className="bg-white p-10 rounded-lg shadow-2xl w-full max-w-md">
-        <h1 className="text-center mb-8 text-gray-800 text-3xl font-bold">Login</h1>
+    <div className="min-h-screen flex justify-center items-center p-8 bg-slate-50">
+      <div className="bg-white p-10 rounded-2xl shadow-lg w-full max-w-md border border-slate-200">
+        <h1 className="text-center mb-8 text-slate-900 text-3xl font-bold">Login</h1>
         <form onSubmit={handleSubmit}>
           <div className="mb-6">
-            <label htmlFor="email" className="block mb-2 text-gray-600 font-medium">Email</label>
+            <label htmlFor="email" className="form-label">Email</label>
             <input
               type="email"
               id="email"
@@ -56,13 +73,14 @@ function Login({ onLogin }) {
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter your email"
-              className="w-full px-3 py-3 border-2 border-gray-200 rounded focus:outline-none focus:border-indigo-500 text-base"
+              className="form-input"
               required
+              disabled={loading}
             />
           </div>
 
           <div className="mb-6">
-            <label htmlFor="password" className="block mb-2 text-gray-600 font-medium">Password</label>
+            <label htmlFor="password" className="form-label">Password</label>
             <input
               type="password"
               id="password"
@@ -70,27 +88,29 @@ function Login({ onLogin }) {
               value={formData.password}
               onChange={handleChange}
               placeholder="Enter your password"
-              className="w-full px-3 py-3 border-2 border-gray-200 rounded focus:outline-none focus:border-indigo-500 text-base"
+              className="form-input"
               required
+              disabled={loading}
             />
           </div>
 
           {error && (
-            <div className="bg-red-100 text-red-700 px-3 py-3 rounded mb-4 text-center">
+            <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl border border-red-200 mb-4 text-center text-sm">
               {error}
             </div>
           )}
 
-          <button 
-            type="submit" 
-            className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded font-semibold text-base hover:shadow-lg hover:-translate-y-0.5 transition-all"
+          <button
+            type="submit"
+            className="w-full btn-primary"
+            disabled={loading}
           >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
-        <p className="text-center mt-6 text-gray-600">
-          Don't have an account? <Link to="/signup" className="text-indigo-600 font-semibold hover:underline">Sign up</Link>
+        <p className="text-center mt-6 text-slate-600 text-sm">
+          Don't have an account? <Link to="/signup" className="text-slate-900 font-semibold hover:underline">Sign up</Link>
         </p>
       </div>
     </div>

@@ -1,18 +1,28 @@
 import { useState, useEffect } from 'react'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-
-const COLORS = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#00f2fe', '#43e97b', '#fa709a', '#fee140']
+import { transactionAPI } from '../services/api'
 
 function Reports() {
   const [transactions, setTransactions] = useState([])
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7))
+  const [loading, setLoading] = useState(true)
 
+  // Load transactions from backend
   useEffect(() => {
-    const saved = localStorage.getItem('transactions')
-    if (saved) {
-      setTransactions(JSON.parse(saved))
-    }
+    fetchTransactions()
   }, [])
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true)
+      const response = await transactionAPI.getAll()
+      setTransactions(response.data)
+    } catch (err) {
+      console.error('Failed to load transactions:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Get months for dropdown
   const getMonths = () => {
@@ -28,7 +38,46 @@ function Reports() {
   // Filter transactions by selected month
   const filteredTransactions = transactions.filter(t => t.date.startsWith(selectedMonth))
 
-  // Calculate monthly summary
+  // Calculate category-wise expenses
+  const categoryData = filteredTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((acc, t) => {
+      const existing = acc.find(item => item.category === t.category)
+      if (existing) {
+        existing.amount += t.amount
+      } else {
+        acc.push({ category: t.category, amount: t.amount })
+      }
+      return acc
+    }, [])
+    .sort((a, b) => b.amount - a.amount)
+
+  // Calculate monthly trend (last 6 months)
+  const monthlyTrend = []
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date()
+    date.setMonth(date.getMonth() - i)
+    const monthStr = date.toISOString().slice(0, 7)
+    const monthTransactions = transactions.filter(t => t.date.startsWith(monthStr))
+
+    const income = monthTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    const expense = monthTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0)
+
+    monthlyTrend.push({
+      month: date.toLocaleDateString('en-US', { month: 'short' }),
+      income,
+      expense
+    })
+  }
+
+  // Colors for pie chart
+  const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#6366f1']
+
   const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0)
@@ -39,64 +88,45 @@ function Reports() {
 
   const balance = totalIncome - totalExpense
 
-  // Category-wise expense data
-  const categoryExpenses = filteredTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((acc, t) => {
-      acc[t.category] = (acc[t.category] || 0) + t.amount
-      return acc
-    }, {})
-
-  const expenseChartData = Object.entries(categoryExpenses)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-
-  // Monthly income vs expense comparison
-  const monthlyComparison = [
-    {
-      name: 'Income',
-      amount: totalIncome
-    },
-    {
-      name: 'Expense',
-      amount: totalExpense
-    }
-  ]
+  if (loading) {
+    return (
+      <div className="w-full">
+        <h1 className="text-slate-800 text-3xl font-bold mb-8">Reports</h1>
+        <p className="text-gray-600">Loading reports...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full">
-      <div className="mb-8">
-        <h1 className="text-gray-800 text-3xl font-bold mb-4">Reports</h1>
-        <div className="flex items-center gap-4">
-          <label htmlFor="month" className="font-medium text-gray-600">Select Month:</label>
-          <select 
-            id="month" 
-            value={selectedMonth} 
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-4 py-2 border-2 border-gray-200 rounded text-base bg-white cursor-pointer focus:outline-none focus:border-indigo-500"
-          >
-            {getMonths().map(month => (
-              <option key={month} value={month}>
-                {new Date(month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-slate-800 text-3xl font-bold">Reports</h1>
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="form-select max-w-xs"
+        >
+          {getMonths().map(month => (
+            <option key={month} value={month}>
+              {new Date(month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Monthly Summary Cards */}
+      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-gray-500 text-sm font-medium mb-2 uppercase tracking-wide">Total Income</h3>
-          <p className="text-3xl font-bold text-green-500">${totalIncome.toLocaleString()}</p>
+        <div className="p-6 rounded-xl shadow-lg" style={{ background: 'linear-gradient(145deg, #ffffff 0%, #f0fdf4 100%)' }}>
+          <h3 className="text-gray-600 text-xs font-semibold mb-2 uppercase tracking-wide">Total Income</h3>
+          <p className="text-3xl font-bold text-green-600">${totalIncome.toLocaleString()}</p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-gray-500 text-sm font-medium mb-2 uppercase tracking-wide">Total Expense</h3>
-          <p className="text-3xl font-bold text-red-500">${totalExpense.toLocaleString()}</p>
+        <div className="p-6 rounded-xl shadow-lg" style={{ background: 'linear-gradient(145deg, #ffffff 0%, #fef2f2 100%)' }}>
+          <h3 className="text-gray-600 text-xs font-semibold mb-2 uppercase tracking-wide">Total Expense</h3>
+          <p className="text-3xl font-bold text-red-600">${totalExpense.toLocaleString()}</p>
         </div>
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-gray-500 text-sm font-medium mb-2 uppercase tracking-wide">Balance</h3>
-          <p className={`text-3xl font-bold ${balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+        <div className="p-6 rounded-xl shadow-lg" style={{ background: 'linear-gradient(145deg, #ffffff 0%, #eff6ff 100%)' }}>
+          <h3 className="text-gray-600 text-xs font-semibold mb-2 uppercase tracking-wide">Balance</h3>
+          <p className={`text-3xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             ${balance.toLocaleString()}
           </p>
         </div>
@@ -104,94 +134,93 @@ function Reports() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Income vs Expense Bar Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Income vs Expense</h2>
+        {/* Monthly Trend */}
+        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4 text-slate-700">Monthly Trend (Last 6 Months)</h2>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyComparison}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+            <BarChart data={monthlyTrend}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="month" stroke="#64748b" />
+              <YAxis stroke="#64748b" />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+              />
               <Legend />
-              <Bar dataKey="amount" fill="#667eea" />
+              <Bar dataKey="income" fill="#10b981" name="Income" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="expense" fill="#ef4444" name="Expense" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* Category-wise Expense Pie Chart */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Expenses by Category</h2>
-          {expenseChartData.length > 0 ? (
+        {/* Category Breakdown */}
+        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+          <h2 className="text-xl font-semibold mb-4 text-slate-700">Expense by Category</h2>
+          {categoryData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={expenseChartData}
+                  data={categoryData}
+                  dataKey="amount"
+                  nameKey="category"
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
+                  outerRadius={100}
+                  label={(entry) => `${entry.category}: $${entry.amount}`}
                 >
-                  {expenseChartData.map((entry, index) => (
+                  {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[300px] text-gray-500">
-              <p>No expense data available for this month</p>
-            </div>
+            <p className="text-center text-slate-500 py-12">No expense data for this month</p>
           )}
         </div>
       </div>
 
-      {/* Category-wise Expense Table */}
-      {expenseChartData.length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4 text-gray-700">Category Breakdown</h2>
+      {/* Category Table */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-200">
+          <h2 className="text-xl font-semibold text-slate-700">Category Breakdown</h2>
+        </div>
+        {categoryData.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Category</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Percentage</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Visual</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {expenseChartData.map((item, index) => {
-                  const percentage = totalExpense > 0 ? ((item.value / totalExpense) * 100).toFixed(1) : 0
+              <tbody className="bg-white divide-y divide-slate-200">
+                {categoryData.map((item, index) => {
+                  const percentage = ((item.amount / totalExpense) * 100).toFixed(1)
                   return (
-                    <tr key={item.name} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        <div className="flex items-center">
-                          <div 
-                            className="w-4 h-4 rounded mr-2"
-                            style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                    <tr key={item.category} className="hover:bg-slate-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                        {item.category}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                        ${item.amount.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                        {percentage}%
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div
+                            className="h-2 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${percentage}%`,
+                              backgroundColor: COLORS[index % COLORS.length]
+                            }}
                           />
-                          {item.name}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        ${item.value.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-full bg-gray-200 rounded-full h-2 mr-2">
-                            <div
-                              className="h-2 rounded-full"
-                              style={{
-                                width: `${percentage}%`,
-                                backgroundColor: COLORS[index % COLORS.length]
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm text-gray-600">{percentage}%</span>
                         </div>
                       </td>
                     </tr>
@@ -200,8 +229,12 @@ function Reports() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="p-8 text-center text-slate-500">
+            <p>No expense data for this month</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
