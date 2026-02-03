@@ -82,7 +82,7 @@ function AddTransactionModal({ isOpen, onClose, onAdd, editingTransaction }) {
   const handleSubmit = (e) => {
     e.preventDefault()
 
-    if (!formData.category || !formData.amount || !formData.description) {
+    if (!formData.category || !formData.amount) {
       alert('Please fill in all required fields')
       return
     }
@@ -190,7 +190,7 @@ function AddTransactionModal({ isOpen, onClose, onAdd, editingTransaction }) {
           </div>
 
           <div className="mb-5">
-            <label htmlFor="description" className="form-label">Description</label>
+            <label htmlFor="description" className="form-label">Description (Optional)</label>
             <textarea
               id="description"
               name="description"
@@ -199,7 +199,6 @@ function AddTransactionModal({ isOpen, onClose, onAdd, editingTransaction }) {
               placeholder="Enter description"
               rows="3"
               className="form-input resize-y"
-              required
             />
           </div>
 

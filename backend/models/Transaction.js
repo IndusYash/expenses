@@ -25,7 +25,7 @@ const transactionSchema = new mongoose.Schema({
     },
     description: {
         type: String,
-        required: true,
+        default: '',
     },
     receipt: {
         type: String,
