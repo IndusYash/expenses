@@ -301,6 +301,20 @@ function TransactionHistory() {
               <button
                 className="text-3xl text-slate-500 hover:text-slate-700 w-8 h-8 flex items-center justify-center"
                 onClick={() => setSelectedReceipt(null)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4">
+              <img
+                src={selectedReceipt}
+                alt="Receipt"
+                className="w-full h-auto"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Notifications */}
       {notification && (
@@ -324,20 +338,6 @@ function TransactionHistory() {
         cancelText="Cancel"
         type="danger"
       />
-              >
-                ×
-              </button>
-            </div>
-            <div className="p-4">
-              <img
-                src={selectedReceipt}
-                alt="Receipt"
-                className="w-full h-auto"
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

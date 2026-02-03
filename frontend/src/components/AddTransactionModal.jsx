@@ -86,11 +86,7 @@ function AddTransactionModal({ isOpen, onClose, onAdd, editingTransaction }) {
     }
     reader.readAsDataURL(file)
   }
-showWarning(
-        'Missing Information',
-        'Please fill in all required fields before submitting.',
-        3000
-      
+
   const handleRemoveReceipt = () => {
     setFormData({ ...formData, receipt: null })
     setReceiptPreview(null)
