@@ -120,8 +120,11 @@ const checkUpcomingReminders = async () => {
                 // Check each notification interval
                 for (const interval of reminder.notificationIntervals) {
                     // Check if we should send notification for this interval
-                    // Send if we're within 15 minutes of the target time (to account for cron frequency)
-                    const shouldSend = Math.abs(minutesUntilEvent - interval) <= 15;
+                    // For interval=0 (event time), send if we're within 15 minutes of event
+                    // For other intervals, send if we're within 15 minutes of the target time
+                    const shouldSend = interval === 0
+                        ? minutesUntilEvent <= 15 && minutesUntilEvent >= 0
+                        : Math.abs(minutesUntilEvent - interval) <= 15;
 
                     // Check if this notification has already been sent
                     const alreadySent = reminder.sentNotifications.some(
@@ -139,16 +142,22 @@ const checkUpcomingReminders = async () => {
 
                         // Send Telegram notification if enabled
                         if (reminder.user.telegramEnabled && reminder.user.telegramChatId) {
-                            const hoursUntil = Math.floor(interval / 60);
-                            const minutesRemaining = interval % 60;
                             let timeUntil = '';
-                            if (hoursUntil > 0) {
-                                timeUntil = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}`;
-                                if (minutesRemaining > 0) {
-                                    timeUntil += ` ${minutesRemaining} min`;
-                                }
+
+                            if (interval === 0) {
+                                // Event is happening now!
+                                timeUntil = 'now';
                             } else {
-                                timeUntil = `${minutesRemaining} min`;
+                                const hoursUntil = Math.floor(interval / 60);
+                                const minutesRemaining = interval % 60;
+                                if (hoursUntil > 0) {
+                                    timeUntil = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}`;
+                                    if (minutesRemaining > 0) {
+                                        timeUntil += ` ${minutesRemaining} min`;
+                                    }
+                                } else {
+                                    timeUntil = `${minutesRemaining} min`;
+                                }
                             }
 
                             const message = formatNotificationMessage('reminder', {
@@ -199,7 +208,7 @@ const checkUpcomingTasks = async () => {
 
         const now = new Date();
         let notificationsSent = 0;
-        const notificationIntervals = [120, 15]; // 2 hours and 15 minutes before
+        const notificationIntervals = [120, 15, 0]; // 2 hours, 15 minutes before, and at event time
 
         for (const task of tasks) {
             try {
@@ -219,11 +228,14 @@ const checkUpcomingTasks = async () => {
                 // Calculate time until task in minutes
                 const minutesUntilTask = Math.floor((taskDateTime - now) / (1000 * 60));
 
-                // Check each notification interval (120 min and 15 min)
+                // Check each notification interval (120 min, 15 min, and 0 min)
                 for (const interval of notificationIntervals) {
                     // Check if we should send notification for this interval
-                    // Send if we're within 15 minutes of the target time (to account for cron frequency)
-                    const shouldSend = Math.abs(minutesUntilTask - interval) <= 15;
+                    // For interval=0 (event time), send if we're within 15 minutes of event
+                    // For other intervals, send if we're within 15 minutes of the target time
+                    const shouldSend = interval === 0
+                        ? minutesUntilTask <= 15 && minutesUntilTask >= 0
+                        : Math.abs(minutesUntilTask - interval) <= 15;
 
                     // Check if this notification has already been sent
                     const alreadySent = task.sentNotifications.some(
@@ -235,16 +247,22 @@ const checkUpcomingTasks = async () => {
                         let telegramSent = false;
 
                         // Prepare notification message
-                        const hoursUntil = Math.floor(interval / 60);
-                        const minutesRemaining = interval % 60;
                         let timeUntil = '';
-                        if (hoursUntil > 0) {
-                            timeUntil = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}`;
-                            if (minutesRemaining > 0) {
-                                timeUntil += ` ${minutesRemaining} min`;
-                            }
+
+                        if (interval === 0) {
+                            // Task is due now!
+                            timeUntil = 'now';
                         } else {
-                            timeUntil = `${minutesRemaining} min`;
+                            const hoursUntil = Math.floor(interval / 60);
+                            const minutesRemaining = interval % 60;
+                            if (hoursUntil > 0) {
+                                timeUntil = `${hoursUntil} hour${hoursUntil > 1 ? 's' : ''}`;
+                                if (minutesRemaining > 0) {
+                                    timeUntil += ` ${minutesRemaining} min`;
+                                }
+                            } else {
+                                timeUntil = `${minutesRemaining} min`;
+                            }
                         }
 
                         // Send email if enabled
