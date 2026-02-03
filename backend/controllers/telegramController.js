@@ -17,8 +17,12 @@ const handleWebhook = async (req, res) => {
 
             console.log(`Telegram message from ${username || firstName} (${chatId}): ${text}`);
 
-            // Handle /start command
-            if (text === '/start') {
+            // Handle /start command with optional token
+            if (text && text.startsWith('/start')) {
+                // Extract token from command (format: /start TOKEN)
+                const parts = text.split(' ');
+                const token = parts.length > 1 ? parts[1] : null;
+
                 // Check if chat ID is already linked to a user
                 const existingUser = await User.findOne({ telegramChatId: chatId });
 
@@ -29,18 +33,40 @@ const handleWebhook = async (req, res) => {
                         `Account: ${existingUser.name} (${existingUser.email})\n\n` +
                         `You're all set to receive notifications.`
                     );
+                } else if (token) {
+                    // Token-based linking
+                    const user = await User.findOne({
+                        telegramLinkToken: token,
+                        telegramLinkTokenExpiry: { $gt: new Date() }
+                    });
+
+                    if (user) {
+                        // Link the account
+                        user.telegramChatId = chatId;
+                        user.telegramEnabled = true;
+                        user.telegramLinkToken = null;
+                        user.telegramLinkTokenExpiry = null;
+                        await user.save();
+
+                        // Send success message
+                        const welcomeMessage = formatNotificationMessage('welcome', {});
+                        await sendTelegramMessage(chatId, welcomeMessage);
+                    } else {
+                        // Invalid or expired token
+                        await sendTelegramMessage(
+                            chatId,
+                            `❌ <b>Link Failed</b>\n\n` +
+                            `This link has expired or is invalid.\n\n` +
+                            `Please generate a new link from your Finance Tracker Dashboard.`
+                        );
+                    }
                 } else {
-                    // Send chat ID clearly to user
+                    // No token provided - show manual instructions
                     await sendTelegramMessage(
                         chatId,
                         `👋 <b>Welcome to Finance Tracker!</b>\n\n` +
-                        `📋 Your Chat ID: <code>${chatId}</code>\n\n` +
-                        `<b>To connect your account:</b>\n` +
-                        `1. Copy the Chat ID above (tap to copy)\n` +
-                        `2. Go to Finance Tracker Profile page\n` +
-                        `3. Paste the Chat ID\n` +
-                        `4. Click "Link Account"\n\n` +
-                        `Then you'll receive instant notifications! 🔔`
+                        `To connect your account, please use the "Connect Telegram" button on your Dashboard.\n\n` +
+                        `This will generate a secure link that automatically connects your account.`
                     );
                 }
             }
@@ -185,10 +211,47 @@ const testTelegramNotification = async (req, res) => {
     }
 };
 
+/**
+ * Generate a link token for Telegram account linking
+ */
+const generateLinkToken = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+
+        // Generate a random token
+        const crypto = require('crypto');
+        const token = crypto.randomBytes(32).toString('hex');
+
+        // Set token expiry to 10 minutes from now
+        const expiry = new Date(Date.now() + 10 * 60 * 1000);
+
+        // Save token to user
+        user.telegramLinkToken = token;
+        user.telegramLinkTokenExpiry = expiry;
+        await user.save();
+
+        // Generate deep link URL
+        const botUsername = 'Wakemeup_mmm_bot';
+        const deepLink = `https://t.me/${botUsername}?start=${token}`;
+
+        res.json({
+            success: true,
+            token,
+            deepLink,
+            expiresAt: expiry
+        });
+    } catch (error) {
+        console.error('Error generating link token:', error);
+        res.status(500).json({ error: 'Failed to generate link token' });
+    }
+};
+
 module.exports = {
     handleWebhook,
     linkTelegramAccount,
     unlinkTelegramAccount,
     getTelegramStatus,
     testTelegramNotification,
+    generateLinkToken,
 };

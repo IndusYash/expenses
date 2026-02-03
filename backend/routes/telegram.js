@@ -6,6 +6,7 @@ const {
     unlinkTelegramAccount,
     getTelegramStatus,
     testTelegramNotification,
+    generateLinkToken,
 } = require('../controllers/telegramController');
 const { protect } = require('../middleware/auth');
 
@@ -13,6 +14,7 @@ const { protect } = require('../middleware/auth');
 router.post('/webhook', handleWebhook);
 
 // Protected routes (require authentication)
+router.post('/generate-token', protect, generateLinkToken);
 router.post('/link', protect, linkTelegramAccount);
 router.post('/unlink', protect, unlinkTelegramAccount);
 router.get('/status', protect, getTelegramStatus);

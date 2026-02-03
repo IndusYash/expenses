@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=Merriweather:wght@700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,40 +6,40 @@
 
 @layer base {
   :root {
-    /* Clean Minimalist Color Palette - White, Grey, Black */
+    /* Classic Professional Color Palette */
     --color-background: #ffffff;
-    --color-surface: #fafafa;
+    --color-surface: #f8f8f8;
     --color-surface-elevated: #ffffff;
 
-    /* Text Colors - Black to Grey spectrum */
-    --color-text-primary: #0f172a;
-    --color-text-secondary: #475569;
-    --color-text-tertiary: #94a3b8;
+    /* Text Colors - Warmer blacks and greys */
+    --color-text-primary: #1a1a1a;
+    --color-text-secondary: #4a4a4a;
+    --color-text-tertiary: #888888;
 
     /* Border and Divider Colors */
-    --color-border-light: #f1f5f9;
-    --color-border: #e2e8f0;
-    --color-border-dark: #cbd5e1;
+    --color-border-light: #eeeeee;
+    --color-border: #d4d4d4;
+    --color-border-dark: #b0b0b0;
 
-    /* Accent Colors - Minimal and subtle */
-    --color-accent: #0f172a;
-    --color-accent-hover: #1e293b;
-    --color-success: #10b981;
-    --color-danger: #ef4444;
-    --color-warning: #f59e0b;
+    /* Accent Colors - Muted and professional */
+    --color-accent: #2c2c2c;
+    --color-accent-hover: #1a1a1a;
+    --color-success: #2d7a4f;
+    --color-danger: #c53030;
+    --color-warning: #d97706;
 
-    /* Shadows - Clean and subtle */
-    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+    /* Shadows - Subtle and minimal */
+    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 2px 4px 0 rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 4px 8px 0 rgba(0, 0, 0, 0.10);
+    --shadow-xl: 0 8px 16px 0 rgba(0, 0, 0, 0.12);
 
-    /* Border Radius - Modern and clean */
-    --radius-sm: 0.5rem;
-    --radius-md: 0.75rem;
-    --radius-lg: 1rem;
-    --radius-xl: 1.5rem;
+    /* Border Radius - More traditional */
+    --radius-sm: 0.25rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
 
     /* Spacing */
     --spacing-xs: 0.5rem;
@@ -51,10 +51,24 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: var(--color-text-primary);
-  background: #ffffff;
+  margin: 0;
+  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Merriweather', Georgia, serif;
+  line-height: 1.3;
+  font-weight: 700;
 }
 
 /* Dotted Pattern Background */
@@ -338,19 +352,19 @@ h6 {
     opacity: 1;
   }
 
-  /* Enhanced Interactive States */
+  /* Interactive lift effect */
   .interactive-lift {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
 
   .interactive-lift:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   }
 
   .interactive-lift:active {
     transform: translateY(0);
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
   }
 
   /* Smooth Focus States */
@@ -385,4 +399,117 @@ h6 {
     background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
     border-left: 3px solid #a855f7;
   }
+}
+
+/* Calendar Custom Styling */
+.calendar-custom {
+  font-family: 'Inter', sans-serif;
+}
+
+.calendar-custom .react-calendar__navigation {
+  margin-bottom: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  padding: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.calendar-custom .react-calendar__navigation button {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.calendar-custom .react-calendar__navigation button:hover {
+  background: #f1f5f9;
+  color: #3b82f6;
+}
+
+.calendar-custom .react-calendar__navigation button:disabled {
+  opacity: 0.3;
+}
+
+.calendar-custom .react-calendar__month-view__weekdays {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.calendar-custom .react-calendar__month-view__weekdays__weekday {
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.calendar-custom .react-calendar__tile {
+  padding: 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #334155;
+  border-radius: 10px;
+  margin: 2px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.calendar-custom .react-calendar__tile:hover {
+  transform: scale(1.05);
+  z-index: 10;
+}
+
+.calendar-custom .react-calendar__tile--now {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.calendar-custom .react-calendar__tile--now:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.calendar-custom .react-calendar__tile--active {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.calendar-custom .react-calendar__tile--active:hover {
+  background: #bae6fd;
+}
+
+.calendar-custom .react-calendar__month-view__days__day--neighboringMonth {
+  color: #cbd5e1;
+  opacity: 0.5;
+}
+
+.calendar-custom .react-calendar__month-view__days__day--weekend {
+  color: #ef4444;
+}
+
+.calendar-custom abbr[title] {
+  text-decoration: none;
+}
+
+/* Remove blue selection color and fix dropdown */
+.react-calendar__tile--active,
+.react-calendar__tile--active:enabled:hover,
+.react-calendar__tile--active:enabled:focus {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.react-calendar__tile {
+  position: relative;
+}
+
+.react-calendar__tile:hover {
+  background: #f1f5f9;
 }

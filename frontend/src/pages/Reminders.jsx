@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Calendar from 'react-calendar'
 import 'react-calendar/dist/Calendar.css'
-import { reminderAPI, taskAPI } from '../services/api'
+import { taskAPI, reminderAPI } from '../services/api'
 
-function Reminders() {
+export default function Reminders() {
     const [activeTab, setActiveTab] = useState('tasks')
     const [tasks, setTasks] = useState([])
     const [reminders, setReminders] = useState([])
@@ -13,6 +13,9 @@ function Reminders() {
     const [showReminderModal, setShowReminderModal] = useState(false)
     const [editingTask, setEditingTask] = useState(null)
     const [editingReminder, setEditingReminder] = useState(null)
+    const [openMenuDate, setOpenMenuDate] = useState(null) // Track which date menu is open
+    const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
+    const clickedDateRef = useRef(null)
 
     useEffect(() => {
         fetchData()
@@ -92,42 +95,69 @@ function Reminders() {
         return null
     }
 
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (openMenuDate) {
+                // Check if click is on a calendar date button or inside the dropdown
+                const isCalendarClick = event.target.closest('.react-calendar__tile')
+                const isDropdownClick = event.target.closest('[data-dropdown-menu]')
+
+                if (!isCalendarClick && !isDropdownClick) {
+                    setOpenMenuDate(null)
+                }
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [openMenuDate])
+
     if (loading) {
         return <div className="w-full"><p className="text-gray-600">Loading...</p></div>
     }
 
     return (
         <div className="w-full animate-fade-in">
-            <h1 className="text-slate-800 text-3xl font-bold mb-8 animate-slide-up">Reminders & To-Do</h1>
+            <h1 className="text-gray-900 text-3xl font-bold mb-8" style={{ fontFamily: 'Merriweather, Georgia, serif' }}>Reminders & Tasks</h1>
 
             {/* Tabs */}
-            <div className="flex gap-2 mb-6 border-b border-slate-200">
+            <div className="flex gap-6 mb-6 border-b border-gray-200">
                 <button
                     onClick={() => setActiveTab('tasks')}
-                    className={`px-6 py-3 font-medium transition-colors ${activeTab === 'tasks'
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-slate-600 hover:text-slate-800'
+                    className={`pb-3 font-medium transition-colors relative ${activeTab === 'tasks'
+                        ? 'text-gray-900'
+                        : 'text-gray-600 hover:text-gray-900'
                         }`}
                 >
-                    📝 To-Do List ({tasks.filter(t => !t.completed).length})
+                    Tasks ({tasks.filter(t => !t.completed).length})
+                    {activeTab === 'tasks' && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></span>
+                    )}
                 </button>
                 <button
                     onClick={() => setActiveTab('reminders')}
-                    className={`px-6 py-3 font-medium transition-colors ${activeTab === 'reminders'
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-slate-600 hover:text-slate-800'
+                    className={`pb-3 font-medium transition-colors relative ${activeTab === 'reminders'
+                        ? 'text-gray-900'
+                        : 'text-gray-600 hover:text-gray-900'
                         }`}
                 >
-                    🔔 Reminders ({reminders.filter(r => !r.completed).length})
+                    Reminders ({reminders.filter(r => !r.completed).length})
+                    {activeTab === 'reminders' && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></span>
+                    )}
                 </button>
                 <button
                     onClick={() => setActiveTab('calendar')}
-                    className={`px-6 py-3 font-medium transition-colors ${activeTab === 'calendar'
-                        ? 'text-blue-600 border-b-2 border-blue-600'
-                        : 'text-slate-600 hover:text-slate-800'
+                    className={`pb-3 font-medium transition-colors relative ${activeTab === 'calendar'
+                        ? 'text-gray-900'
+                        : 'text-gray-600 hover:text-gray-900'
                         }`}
                 >
-                    📅 Calendar
+                    Calendar
+                    {activeTab === 'calendar' && (
+                        <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900"></span>
+                    )}
                 </button>
             </div>
 
@@ -158,19 +188,20 @@ function Reminders() {
                                             className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
                                         />
                                         <div className="flex-1">
-                                            <h3 className={`font-semibold text-slate-800 ${task.completed ? 'line-through text-slate-400' : ''}`}>
+                                            <h3 className={`font - semibold text - slate - 800 ${task.completed ? 'line-through text-slate-400' : ''} `}>
                                                 {task.title}
                                             </h3>
                                             {task.description && (
                                                 <p className="text-sm text-slate-600 mt-1">{task.description}</p>
                                             )}
                                             <div className="flex gap-2 mt-2">
-                                                <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(task.priority)}`}>
+                                                <span className={`text - xs px - 2 py - 1 rounded ${getPriorityColor(task.priority)} `}>
                                                     {task.priority}
                                                 </span>
                                                 {task.dueDate && (
                                                     <span className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-700">
                                                         Due: {new Date(task.dueDate).toLocaleDateString()}
+                                                        {task.dueTime && ` at ${task.dueTime} `}
                                                     </span>
                                                 )}
                                             </div>
@@ -211,14 +242,14 @@ function Reminders() {
                                     <div className="flex items-start gap-3">
                                         <div className="text-2xl">🔔</div>
                                         <div className="flex-1">
-                                            <h3 className={`font-semibold text-slate-800 ${reminder.completed ? 'line-through text-slate-400' : ''}`}>
+                                            <h3 className={`font - semibold text - slate - 800 ${reminder.completed ? 'line-through text-slate-400' : ''} `}>
                                                 {reminder.title}
                                             </h3>
                                             {reminder.description && (
                                                 <p className="text-sm text-slate-600 mt-1">{reminder.description}</p>
                                             )}
                                             <div className="flex gap-2 mt-2 flex-wrap">
-                                                <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(reminder.priority)}`}>
+                                                <span className={`text - xs px - 2 py - 1 rounded ${getPriorityColor(reminder.priority)} `}>
                                                     {reminder.priority}
                                                 </span>
                                                 <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-800">
@@ -237,8 +268,8 @@ function Reminders() {
                                                         📧 {reminder.notificationIntervals.map(interval => {
                                                             const hours = Math.floor(interval / 60);
                                                             const mins = interval % 60;
-                                                            if (hours > 0) return hours === 1 ? '1h' : `${hours}h`;
-                                                            return `${mins}m`;
+                                                            if (hours > 0) return hours === 1 ? '1h' : `${hours} h`;
+                                                            return `${mins} m`;
                                                         }).join(', ')} before
                                                     </span>
                                                 )}
@@ -260,46 +291,184 @@ function Reminders() {
 
             {/* Calendar Tab */}
             {activeTab === 'calendar' && (
-                <div>
-                    <h2 className="text-xl font-semibold text-slate-700 mb-4">Calendar View</h2>
-                    <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
-                        <Calendar
-                            onChange={setSelectedDate}
-                            value={selectedDate}
-                            tileContent={getTileContent}
-                            className="w-full border-none"
-                        />
-                        <div className="mt-6 flex gap-4 text-sm">
+                <div className="space-y-6">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">Calendar</h2>
+
+                    {/* Calendar Container */}
+                    <div
+                        className="bg-white rounded border border-gray-200 p-6 overflow-visible"
+                    >
+                        <div className="overflow-visible">
+                            <Calendar
+                                onChange={setSelectedDate}
+                                value={selectedDate}
+                                className="w-full border-0"
+                                tileContent={({ date, view }) => {
+                                    if (view !== 'month') return null
+
+                                    const dateStr = date.toISOString().split('T')[0]
+                                    const dayTasks = tasks.filter(t => t.dueDate?.startsWith(dateStr))
+                                    const dayReminders = reminders.filter(r => r.reminderDate?.startsWith(dateStr))
+                                    const isOpen = openMenuDate === dateStr
+
+                                    return (
+                                        <div className="relative pt-1">
+                                            {/* Indicator Dots */}
+                                            {(dayTasks.length > 0 || dayReminders.length > 0) && (
+                                                <div className="flex justify-center gap-1">
+                                                    {dayTasks.length > 0 && <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" />}
+                                                    {dayReminders.length > 0 && <div className="w-1.5 h-1.5 bg-orange-500 rounded-full" />}
+                                                </div>
+                                            )}
+
+                                            {/* Dropdown Menu */}
+                                            {isOpen && (
+                                                <div
+                                                    data-dropdown-menu
+                                                    className="fixed bg-white rounded border border-gray-200 shadow-lg py-1 whitespace-nowrap min-w-[140px]"
+                                                    style={{
+                                                        zIndex: 99999,
+                                                        left: `${menuPosition.x}px`,
+                                                        top: `${menuPosition.y}px`,
+                                                        transform: 'translateX(-50%)'
+                                                    }}
+                                                >
+                                                    <div
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault()
+                                                            e.stopPropagation()
+                                                            setSelectedDate(date)
+                                                            setShowTaskModal(true)
+                                                            setOpenMenuDate(null)
+                                                        }}
+                                                        className="w-full px-4 py-2 text-sm text-left hover:bg-gray-50 transition-colors cursor-pointer text-gray-700"
+                                                    >
+                                                        Add Task
+                                                    </div>
+                                                    <div
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault()
+                                                            e.stopPropagation()
+                                                            setSelectedDate(date)
+                                                            setShowReminderModal(true)
+                                                            setOpenMenuDate(null)
+                                                        }}
+                                                        className="w-full px-4 py-2 text-sm text-left hover:bg-gray-50 transition-colors cursor-pointer text-gray-700"
+                                                    >
+                                                        Add Reminder
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                }}
+                                onClickDay={(date, event) => {
+                                    event.stopPropagation()
+                                    const dateStr = date.toISOString().split('T')[0]
+
+                                    // Get the position of the clicked date tile
+                                    const target = event.target.closest('button')
+                                    if (target) {
+                                        const rect = target.getBoundingClientRect()
+                                        setMenuPosition({
+                                            x: rect.left + rect.width / 2,
+                                            y: rect.bottom + 5
+                                        })
+                                    }
+
+                                    setOpenMenuDate(openMenuDate === dateStr ? null : dateStr)
+                                }}
+                            />
+                        </div>
+
+                        {/* Legend */}
+                        <div className="mt-6 flex gap-6 text-sm text-slate-600">
                             <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                <span className="text-slate-600">Tasks</span>
+                                <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                                <span>Tasks</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                                <span className="text-slate-600">Reminders</span>
+                                <div className="w-2.5 h-2.5 bg-orange-500 rounded-full" />
+                                <span>Reminders</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Items for selected date */}
-                    <div className="mt-6">
-                        <h3 className="font-semibold text-slate-700 mb-3">
-                            Items for {selectedDate.toLocaleDateString()}
+                    {/* Selected Date Items */}
+                    <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
+                        <h3 className="text-lg font-semibold text-slate-800 mb-4">
+                            {selectedDate.toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                month: 'long',
+                                day: 'numeric',
+                                year: 'numeric'
+                            })}
                         </h3>
-                        <div className="space-y-2">
-                            {tasks.filter(t => t.dueDate && t.dueDate.startsWith(selectedDate.toISOString().split('T')[0])).map(task => (
-                                <div key={task._id} className="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
-                                    <p className="font-medium text-blue-900">📝 {task.title}</p>
-                                </div>
-                            ))}
-                            {reminders.filter(r => r.reminderDate && r.reminderDate.startsWith(selectedDate.toISOString().split('T')[0])).map(reminder => (
-                                <div key={reminder._id} className="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
-                                    <p className="font-medium text-orange-900">🔔 {reminder.title} - {reminder.reminderTime}</p>
-                                </div>
-                            ))}
-                            {tasks.filter(t => t.dueDate && t.dueDate.startsWith(selectedDate.toISOString().split('T')[0])).length === 0 &&
-                                reminders.filter(r => r.reminderDate && r.reminderDate.startsWith(selectedDate.toISOString().split('T')[0])).length === 0 && (
-                                    <p className="text-slate-500 text-center py-4">No items for this date</p>
+
+                        {/* Tasks for Selected Date */}
+                        <div className="space-y-3">
+                            {tasks
+                                .filter(t => t.dueDate?.startsWith(selectedDate.toISOString().split('T')[0]))
+                                .map(task => (
+                                    <div
+                                        key={task._id}
+                                        className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded-lg"
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex gap-3">
+                                                <span className="text-xl">📝</span>
+                                                <div>
+                                                    <p className="font-medium text-slate-800">{task.title}</p>
+                                                    {task.dueTime && (
+                                                        <p className="text-sm text-slate-600 mt-1">
+                                                            🕐 {task.dueTime}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <span className={`text - xs px - 2 py - 1 rounded ${getPriorityColor(task.priority)} `}>
+                                                {task.priority}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+
+                            {/* Reminders for Selected Date */}
+                            {reminders
+                                .filter(r => r.reminderDate?.startsWith(selectedDate.toISOString().split('T')[0]))
+                                .map(reminder => (
+                                    <div
+                                        key={reminder._id}
+                                        className="p-4 bg-orange-50 border-l-4 border-orange-500 rounded-lg"
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex gap-3">
+                                                <span className="text-xl">🔔</span>
+                                                <div>
+                                                    <p className="font-medium text-slate-800">{reminder.title}</p>
+                                                    <p className="text-sm text-slate-600 mt-1">
+                                                        🕐 {reminder.eventTime || reminder.reminderTime}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className={`text - xs px - 2 py - 1 rounded ${getPriorityColor(reminder.priority)} `}>
+                                                {reminder.priority}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+
+                            {/* Empty State */}
+                            {tasks.filter(t => t.dueDate?.startsWith(selectedDate.toISOString().split('T')[0])).length === 0 &&
+                                reminders.filter(r => r.reminderDate?.startsWith(selectedDate.toISOString().split('T')[0])).length === 0 && (
+                                    <div className="text-center py-8 text-slate-400">
+                                        <p>No items for this date</p>
+                                        <p className="text-sm mt-2">Click on a date in the calendar to add items</p>
+                                    </div>
                                 )}
                         </div>
                     </div>
@@ -319,6 +488,7 @@ function Reminders() {
                                     title: formData.get('title'),
                                     description: formData.get('description'),
                                     dueDate: formData.get('dueDate') || null,
+                                    dueTime: formData.get('dueTime') || null,
                                     priority: formData.get('priority'),
                                     category: formData.get('category')
                                 })
@@ -330,7 +500,23 @@ function Reminders() {
                         }}>
                             <input name="title" placeholder="Task title" required className="form-input mb-3" />
                             <textarea name="description" placeholder="Description" className="form-input mb-3" rows="3"></textarea>
-                            <input name="dueDate" type="date" className="form-input mb-3" />
+
+                            <div className="mb-3">
+                                <label className="form-label">Due Date & Time</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <input
+                                        name="dueDate"
+                                        type="date"
+                                        className="form-input"
+                                        defaultValue={selectedDate.toISOString().split('T')[0]}
+                                    />
+                                    <input name="dueTime" type="time" className="form-input" placeholder="Time" />
+                                </div>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    ⏰ You'll receive reminders 2 hours and 15 minutes before
+                                </p>
+                            </div>
+
                             <select name="priority" className="form-select mb-3">
                                 <option value="medium">Medium Priority</option>
                                 <option value="high">High Priority</option>
@@ -388,7 +574,13 @@ function Reminders() {
                             <div className="mb-3">
                                 <label className="form-label">Event Date & Time</label>
                                 <div className="grid grid-cols-2 gap-2">
-                                    <input name="reminderDate" type="date" required className="form-input" />
+                                    <input
+                                        name="reminderDate"
+                                        type="date"
+                                        required
+                                        className="form-input"
+                                        defaultValue={selectedDate.toISOString().split('T')[0]}
+                                    />
                                     <input name="eventTime" type="time" required className="form-input" placeholder="Event time" />
                                 </div>
                             </div>
@@ -445,5 +637,3 @@ function Reminders() {
         </div>
     )
 }
-
-export default Reminders

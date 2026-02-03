@@ -42,6 +42,14 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    telegramLinkToken: {
+        type: String,
+        default: null,
+    },
+    telegramLinkTokenExpiry: {
+        type: Date,
+        default: null,
+    },
 }, {
     timestamps: true,
 });

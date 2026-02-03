@@ -9,6 +9,7 @@ import Reports from './pages/Reports'
 import Profile from './pages/Profile'
 import Receipts from './pages/Receipts'
 import Reminders from './pages/Reminders'
+import Analytics from './pages/Analytics'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -120,6 +121,18 @@ function App() {
             isAuthenticated ? (
               <Layout onLogout={handleLogout}>
                 <Reminders />
+              </Layout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            isAuthenticated ? (
+              <Layout onLogout={handleLogout}>
+                <Analytics />
               </Layout>
             ) : (
               <Navigate to="/login" replace />
