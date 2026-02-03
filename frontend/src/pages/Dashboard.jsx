@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import AddTransactionModal from '../components/AddTransactionModal'
+import Notification from '../components/Notification'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { useNotification } from '../hooks/useNotification'
 import { transactionAPI, telegramAPI } from '../services/api'
 
 function Dashboard() {
@@ -11,6 +14,8 @@ function Dashboard() {
   const [telegramStatus, setTelegramStatus] = useState({ telegramEnabled: false, telegramChatId: null })
   const [testingTelegram, setTestingTelegram] = useState(false)
   const [showTelegramSetup, setShowTelegramSetup] = useState(false)
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false)
+  const { notification, showSuccess, showError, showInfo, hideNotification } = useNotification()
 
   // Get months for dropdown
   const getMonths = () => {
@@ -59,24 +64,41 @@ function Dashboard() {
     try {
       setTestingTelegram(true)
       const response = await telegramAPI.test()
-      alert(response.data.message)
+      showInfo(
+        'Test Notification Sent',
+        response.data.message || 'A test notification has been sent to your Telegram.',
+        4000
+      )
     } catch (err) {
-      alert('Failed to send test notification: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Failed to Send',
+        err.response?.data?.message || 'An error occurred while sending the test notification. Please try again.',
+        4000
+      )
     } finally {
       setTestingTelegram(false)
     }
   }
 
   const handleUnlinkTelegram = async () => {
-    if (!confirm('Are you sure you want to disconnect your Telegram account?')) {
-      return
-    }
+    setShowUnlinkConfirm(true)
+  }
+
+  const confirmUnlinkTelegram = async () => {
     try {
       const response = await telegramAPI.unlink()
       setTelegramStatus({ telegramEnabled: false, telegramChatId: null })
-      alert(response.data.message)
+      showSuccess(
+        'Telegram Disconnected',
+        response.data.message || 'Your Telegram account has been successfully disconnected.',
+        3000
+      )
     } catch (err) {
-      alert('Failed to unlink Telegram: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Unlink Failed',
+        err.response?.data?.message || 'An error occurred while unlinking your Telegram account. Please try again.',
+        4000
+      )
     }
   }
 
@@ -102,14 +124,22 @@ function Dashboard() {
           })
           setShowTelegramSetup(false)
           clearInterval(pollInterval)
-          alert('✅ Telegram connected successfully!')
+          showSuccess(
+            'Telegram Connected',
+            'Your Telegram account has been successfully linked. You will now receive notifications.',
+            4000
+          )
         }
       }, 3000)
 
       // Stop polling after 10 minutes (token expiry)
       setTimeout(() => clearInterval(pollInterval), 10 * 60 * 1000)
     } catch (err) {
-      alert('Failed to generate connection link: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Connection Failed',
+        err.response?.data?.message || 'An error occurred while generating the connection link. Please try again.',
+        4000
+      )
     }
   }
 
@@ -132,8 +162,17 @@ function Dashboard() {
       const response = await transactionAPI.create(transaction)
       setTransactions([response.data, ...transactions])
       setIsModalOpen(false)
+      showSuccess(
+        'Transaction Added',
+        'Your new transaction has been successfully recorded.',
+        3000
+      )
     } catch (err) {
-      alert('Failed to add transaction: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Failed to Add',
+        err.response?.data?.message || 'An error occurred while adding the transaction. Please try again.',
+        4000
+      )
     }
   }
 
@@ -266,6 +305,29 @@ function Dashboard() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onAdd={handleAddTransaction}
+      />
+
+      {/* Notifications */}
+      {notification && (
+        <Notification
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
+          duration={notification.duration}
+        />
+      )}
+
+      {/* Unlink Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showUnlinkConfirm}
+        onClose={() => setShowUnlinkConfirm(false)}
+        onConfirm={confirmUnlinkTelegram}
+        title="Disconnect Telegram Account"
+        message="Are you sure you want to disconnect your Telegram account? You will no longer receive notifications via Telegram."
+        confirmText="Disconnect"
+        cancelText="Cancel"
+        type="warning"
       />
     </div>
   )

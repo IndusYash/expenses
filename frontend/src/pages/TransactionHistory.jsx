@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import AddTransactionModal from '../components/AddTransactionModal'
+import Notification from '../components/Notification'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { useNotification } from '../hooks/useNotification'
 import { transactionAPI } from '../services/api'
 
 function TransactionHistory() {
@@ -9,6 +12,8 @@ function TransactionHistory() {
   const [editingTransaction, setEditingTransaction] = useState(null)
   const [selectedReceipt, setSelectedReceipt] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const { notification, showSuccess, showError, hideNotification } = useNotification()
   const [filters, setFilters] = useState({
     type: 'all',
     category: 'all',
@@ -60,13 +65,27 @@ function TransactionHistory() {
   }, [transactions, filters])
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this transaction?')) {
-      try {
-        await transactionAPI.delete(id)
-        setTransactions(transactions.filter(t => t._id !== id))
-      } catch (err) {
-        alert('Failed to delete transaction: ' + (err.response?.data?.message || err.message))
-      }
+    const transaction = transactions.find(t => t._id === id)
+    setDeleteConfirm({ id, transaction })
+  }
+
+  const confirmDelete = async () => {
+    try {
+      await transactionAPI.delete(deleteConfirm.id)
+      setTransactions(transactions.filter(t => t._id !== deleteConfirm.id))
+      showSuccess(
+        'Transaction Deleted',
+        'The transaction has been successfully removed from your records.',
+        3000
+      )
+    } catch (err) {
+      showError(
+        'Deletion Failed',
+        err.response?.data?.message || 'An error occurred while deleting the transaction. Please try again.',
+        4000
+      )
+    } finally {
+      setDeleteConfirm(null)
     }
   }
 
@@ -84,14 +103,28 @@ function TransactionHistory() {
           t._id === editingTransaction._id ? response.data : t
         ))
         setEditingTransaction(null)
+        showSuccess(
+          'Transaction Updated',
+          'Your transaction has been successfully updated.',
+          3000
+        )
       } else {
         // Add new
         const response = await transactionAPI.create(transaction)
         setTransactions([response.data, ...transactions])
+        showSuccess(
+          'Transaction Created',
+          'Your new transaction has been successfully recorded.',
+          3000
+        )
       }
       setIsModalOpen(false)
     } catch (err) {
-      alert('Failed to save transaction: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Operation Failed',
+        err.response?.data?.message || 'An error occurred while saving the transaction. Please try again.',
+        4000
+      )
     }
   }
 
@@ -268,6 +301,29 @@ function TransactionHistory() {
               <button
                 className="text-3xl text-slate-500 hover:text-slate-700 w-8 h-8 flex items-center justify-center"
                 onClick={() => setSelectedReceipt(null)}
+
+      {/* Notifications */}
+      {notification && (
+        <Notification
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
+          duration={notification.duration}
+        />
+      )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={confirmDelete}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete this ${deleteConfirm?.transaction?.type} transaction of $${deleteConfirm?.transaction?.amount}? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        type="danger"
+      />
               >
                 ×
               </button>

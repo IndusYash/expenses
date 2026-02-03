@@ -58,6 +58,7 @@ const reminderSchema = new mongoose.Schema({
         interval: Number, // Which interval was sent (in minutes)
         sentAt: Date,
         emailSent: Boolean,
+        telegramSent: Boolean,
     }],
 }, {
     timestamps: true,

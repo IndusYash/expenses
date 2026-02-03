@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useNotification } from '../hooks/useNotification'
+import Notification from './Notification'
 
 const categories = {
   income: ['Salary', 'Freelance', 'Investment', 'Gift', 'Other'],
@@ -15,6 +17,7 @@ function AddTransactionModal({ isOpen, onClose, onAdd, editingTransaction }) {
     receipt: null
   })
   const [receiptPreview, setReceiptPreview] = useState(null)
+  const { notification, showWarning, hideNotification } = useNotification()
 
   // Update form when editing
   useEffect(() => {
@@ -56,12 +59,22 @@ function AddTransactionModal({ isOpen, onClose, onAdd, editingTransaction }) {
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      alert('Please upload only image files')
+      showWarning(
+        'Invalid File Type',
+        'Please upload only image files (JPG, PNG, GIF, etc.).',
+        3000
+      )
+      e.target.value = null
       return
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size should be less than 5MB')
+      showWarning(
+        'File Too Large',
+        'The file size exceeds the 5MB limit. Please choose a smaller image.',
+        4000
+      )
+      e.target.value = null
       return
     }
 
@@ -73,7 +86,11 @@ function AddTransactionModal({ isOpen, onClose, onAdd, editingTransaction }) {
     }
     reader.readAsDataURL(file)
   }
-
+showWarning(
+        'Missing Information',
+        'Please fill in all required fields before submitting.',
+        3000
+      
   const handleRemoveReceipt = () => {
     setFormData({ ...formData, receipt: null })
     setReceiptPreview(null)
@@ -252,6 +269,17 @@ function AddTransactionModal({ isOpen, onClose, onAdd, editingTransaction }) {
             </button>
           </div>
         </form>
+
+        {/* Notification */}
+        {notification && (
+          <Notification
+            type={notification.type}
+            title={notification.title}
+            message={notification.message}
+            onClose={hideNotification}
+            duration={notification.duration}
+          />
+        )}
       </div>
     </div>
   )

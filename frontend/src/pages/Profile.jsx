@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { authAPI, telegramAPI } from '../services/api'
+import Notification from '../components/Notification'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { useNotification } from '../hooks/useNotification'
 
 function Profile({ onLogout }) {
   const [profilePhoto, setProfilePhoto] = useState(null)
@@ -8,6 +11,8 @@ function Profile({ onLogout }) {
   const [telegramStatus, setTelegramStatus] = useState({ telegramEnabled: false, telegramChatId: null })
   const [chatIdInput, setChatIdInput] = useState('')
   const [loading, setLoading] = useState(true)
+  const [showUnlinkConfirm, setShowUnlinkConfirm] = useState(false)
+  const { notification, showSuccess, showError, showWarning, showInfo, hideNotification } = useNotification()
 
   useEffect(() => {
     fetchUserProfile()
@@ -63,12 +68,22 @@ function Profile({ onLogout }) {
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      alert('Please upload only image files')
+      showWarning(
+        'Invalid File Type',
+        'Please upload only image files (JPG, PNG, GIF, etc.).',
+        3000
+      )
+      e.target.value = null
       return
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size should be less than 5MB')
+      showWarning(
+        'File Too Large',
+        'The file size exceeds the 5MB limit. Please choose a smaller image.',
+        4000
+      )
+      e.target.value = null
       return
     }
 
@@ -80,9 +95,17 @@ function Profile({ onLogout }) {
       try {
         await authAPI.updateProfile({ profilePhoto: photoData })
         setProfilePhoto(photoData)
-        alert('Profile photo updated successfully!')
+        showSuccess(
+          'Profile Updated',
+          'Your profile photo has been successfully updated.',
+          3000
+        )
       } catch (err) {
-        alert('Failed to update profile photo: ' + (err.response?.data?.message || err.message))
+        showError(
+          'Update Failed',
+          err.response?.data?.message || 'An error occurred while updating your profile photo. Please try again.',
+          4000
+        )
       }
     }
     reader.readAsDataURL(file)
@@ -93,9 +116,17 @@ function Profile({ onLogout }) {
       await authAPI.updateProfile({ profilePhoto: null })
       setProfilePhoto(null)
       setPhotoPreview(null)
-      alert('Profile photo removed successfully!')
+      showSuccess(
+        'Photo Removed',
+        'Your profile photo has been successfully removed.',
+        3000
+      )
     } catch (err) {
-      alert('Failed to remove profile photo: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Removal Failed',
+        err.response?.data?.message || 'An error occurred while removing your profile photo. Please try again.',
+        4000
+      )
     }
   }
 
@@ -105,65 +136,118 @@ function Profile({ onLogout }) {
         emailNotifications: !userInfo.emailNotifications
       })
       setUserInfo({ ...userInfo, emailNotifications: response.data.emailNotifications })
-      alert(response.data.message)
+      showSuccess(
+        'Preferences Updated',
+        response.data.message || 'Your email notification preferences have been successfully updated.',
+        3000
+      )
     } catch (err) {
-      alert('Failed to update preferences: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Update Failed',
+        err.response?.data?.message || 'An error occurred while updating your preferences. Please try again.',
+        4000
+      )
     }
   }
 
   const handleSendTestEmail = async () => {
     try {
       await authAPI.sendTestEmail()
-      alert('Test email sent! Check your inbox.')
+      showInfo(
+        'Test Email Sent',
+        'A test email has been sent to your inbox. Please check your email.',
+        4000
+      )
     } catch (err) {
-      alert('Failed to send test email: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Failed to Send',
+        err.response?.data?.message || 'An error occurred while sending the test email. Please try again.',
+        4000
+      )
     }
   }
 
   const handleSendSummaryNow = async () => {
     try {
       await authAPI.sendSummaryNow()
-      alert('Weekly summary sent! Check your inbox.')
+      showInfo(
+        'Summary Sent',
+        'Your weekly financial summary has been sent to your inbox.',
+        4000
+      )
     } catch (err) {
-      alert('Failed to send summary: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Failed to Send',
+        err.response?.data?.message || 'An error occurred while sending the summary. Please try again.',
+        4000
+      )
     }
   }
 
   const handleLinkTelegram = async () => {
     if (!chatIdInput) {
-      alert('Please enter your Telegram Chat ID')
+      showWarning(
+        'Chat ID Required',
+        'Please enter your Telegram Chat ID to link your account.',
+        3000
+      )
       return
     }
     try {
       const response = await telegramAPI.link({ chatId: parseInt(chatIdInput) })
       setTelegramStatus({ telegramEnabled: true, telegramChatId: parseInt(chatIdInput) })
       setChatIdInput('')
-      alert(response.data.message)
+      showSuccess(
+        'Telegram Linked',
+        response.data.message || 'Your Telegram account has been successfully linked.',
+        3000
+      )
       fetchTelegramStatus()
     } catch (err) {
-      alert('Failed to link Telegram: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Linking Failed',
+        err.response?.data?.message || 'An error occurred while linking your Telegram account. Please try again.',
+        4000
+      )
     }
   }
 
   const handleUnlinkTelegram = async () => {
-    if (!confirm('Are you sure you want to disconnect your Telegram account?')) {
-      return
-    }
+    setShowUnlinkConfirm(true)
+  }
+
+  const confirmUnlinkTelegram = async () => {
     try {
       const response = await telegramAPI.unlink()
       setTelegramStatus({ telegramEnabled: false, telegramChatId: null })
-      alert(response.data.message)
+      showSuccess(
+        'Telegram Unlinked',
+        response.data.message || 'Your Telegram account has been successfully disconnected.',
+        3000
+      )
     } catch (err) {
-      alert('Failed to unlink Telegram: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Unlink Failed',
+        err.response?.data?.message || 'An error occurred while unlinking your Telegram account. Please try again.',
+        4000
+      )
     }
   }
 
   const handleTestTelegram = async () => {
     try {
       const response = await telegramAPI.test()
-      alert(response.data.message)
+      showInfo(
+        'Test Notification Sent',
+        response.data.message || 'A test notification has been sent to your Telegram.',
+        4000
+      )
     } catch (err) {
-      alert('Failed to send test notification: ' + (err.response?.data?.message || err.message))
+      showError(
+        'Failed to Send',
+        err.response?.data?.message || 'An error occurred while sending the test notification. Please try again.',
+        4000
+      )
     }
   }
 
@@ -436,6 +520,29 @@ function Profile({ onLogout }) {
           Logout
         </button>
       </div>
+
+      {/* Notifications */}
+      {notification && (
+        <Notification
+          type={notification.type}
+          title={notification.title}
+          message={notification.message}
+          onClose={hideNotification}
+          duration={notification.duration}
+        />
+      )}
+
+      {/* Unlink Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showUnlinkConfirm}
+        onClose={() => setShowUnlinkConfirm(false)}
+        onConfirm={confirmUnlinkTelegram}
+        title="Disconnect Telegram Account"
+        message="Are you sure you want to disconnect your Telegram account? You will no longer receive notifications via Telegram."
+        confirmText="Disconnect"
+        cancelText="Cancel"
+        type="warning"
+      />
     </div>
   )
 }
