@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 function Signup({ onLogin }) {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -44,6 +45,8 @@ function Signup({ onLogin }) {
 
     // Dummy signup - just proceed
     onLogin({ name: formData.name, email: formData.email })
+    // Navigate to dashboard after successful signup
+    navigate('/dashboard')
   }
 
   return (

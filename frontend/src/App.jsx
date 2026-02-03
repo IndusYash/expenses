@@ -42,31 +42,68 @@ function App() {
       <Routes>
         <Route 
           path="/login" 
-          element={!isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" />} 
+          element={!isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" replace />} 
         />
         <Route 
           path="/signup" 
-          element={!isAuthenticated ? <Signup onLogin={handleLogin} /> : <Navigate to="/dashboard" />} 
+          element={!isAuthenticated ? <Signup onLogin={handleLogin} /> : <Navigate to="/dashboard" replace />} 
         />
         <Route
-          path="/"
+          path="/dashboard"
           element={
             isAuthenticated ? (
               <Layout onLogout={handleLogout}>
-                <Routes>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/transactions" element={<TransactionHistory />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/profile" element={<Profile onLogout={handleLogout} />} />
-                  <Route path="/" element={<Navigate to="/dashboard" />} />
-                </Routes>
+                <Dashboard />
               </Layout>
             ) : (
-              <Navigate to="/login" />
+              <Navigate to="/login" replace />
             )
           }
         />
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
+        <Route
+          path="/transactions"
+          element={
+            isAuthenticated ? (
+              <Layout onLogout={handleLogout}>
+                <TransactionHistory />
+              </Layout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            isAuthenticated ? (
+              <Layout onLogout={handleLogout}>
+                <Reports />
+              </Layout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            isAuthenticated ? (
+              <Layout onLogout={handleLogout}>
+                <Profile onLogout={handleLogout} />
+              </Layout>
+            ) : (
+              <Navigate to="/login" replace />
+            )
+          }
+        />
+        <Route 
+          path="/" 
+          element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} 
+        />
+        <Route 
+          path="*" 
+          element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} 
+        />
       </Routes>
     </Router>
   )
