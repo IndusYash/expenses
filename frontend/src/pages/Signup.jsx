@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authAPI } from '../services/api'
 
-function Signup() {
+function Signup({ onSignup }) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -66,6 +66,11 @@ function Signup() {
       localStorage.setItem('isAuthenticated', 'true')
       localStorage.setItem('userEmail', response.data.email)
       localStorage.setItem('userName', response.data.name)
+
+      // Update parent component's auth state
+      if (onSignup) {
+        onSignup(response.data)
+      }
 
       // Redirect to dashboard
       navigate('/dashboard')

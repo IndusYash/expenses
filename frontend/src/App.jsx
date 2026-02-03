@@ -63,7 +63,7 @@ function App() {
             isAuthenticated ? (
               <Navigate to="/dashboard" replace />
             ) : (
-              <Signup />
+              <Signup onSignup={handleLogin} />
             )
           }
         />
