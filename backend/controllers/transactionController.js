@@ -34,12 +34,19 @@ const createTransaction = async (req, res) => {
         // Send Telegram notification if enabled
         const user = await User.findById(req.user._id);
         if (user.telegramEnabled && user.telegramChatId) {
+            // Calculate current balance
+            const allTransactions = await Transaction.find({ user: req.user._id });
+            const balance = allTransactions.reduce((total, t) => {
+                return t.type === 'income' ? total + t.amount : total - t.amount;
+            }, 0);
+
             const messageType = type === 'expense' ? 'expense' : 'income';
             const message = formatNotificationMessage(messageType, {
                 amount,
                 category,
                 description,
                 date,
+                balance,
             });
             await sendTelegramMessage(user.telegramChatId, message);
         }

@@ -119,14 +119,16 @@ const formatNotificationMessage = (type, data) => {
                 `Amount: ₹${data.amount}\n` +
                 `Category: ${data.category}\n` +
                 `Description: ${data.description || 'N/A'}\n` +
-                `Date: ${new Date(data.date).toLocaleDateString()}`;
+                `Date: ${new Date(data.date).toLocaleDateString()}\n\n` +
+                `💰 <b>Available Balance: ₹${data.balance ? data.balance.toFixed(2) : '0.00'}</b>`;
 
         case 'income':
             return `💰 <b>New Income Added</b>\n\n` +
                 `Amount: ₹${data.amount}\n` +
                 `Category: ${data.category}\n` +
                 `Description: ${data.description || 'N/A'}\n` +
-                `Date: ${new Date(data.date).toLocaleDateString()}`;
+                `Date: ${new Date(data.date).toLocaleDateString()}\n\n` +
+                `💰 <b>Available Balance: ₹${data.balance ? data.balance.toFixed(2) : '0.00'}</b>`;
 
         case 'budget_exceeded':
             return `⚠️ <b>Budget Alert!</b>\n\n` +
@@ -157,6 +159,34 @@ const formatNotificationMessage = (type, data) => {
                 `• Budget alerts\n` +
                 `• Reminders\n` +
                 `• Weekly summaries`;
+
+        case 'reminder_created':
+            const intervals = data.intervals || [360, 120, 10, 0];
+            const formatInterval = (min) => {
+                if (min === 0) return 'At event time';
+                const hours = Math.floor(min / 60);
+                const mins = min % 60;
+                if (hours > 0 && mins > 0) return `${hours}h ${mins}min before`;
+                if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} before`;
+                return `${mins} minute${mins > 1 ? 's' : ''} before`;
+            };
+            return `✅ <b>Reminder Set Successfully</b>\n\n` +
+                `<b>${data.title}</b>\n` +
+                `${data.description ? data.description + '\n' : ''}` +
+                `📅 ${new Date(data.date).toLocaleDateString()} at ${data.time}\n\n` +
+                `🔔 <b>You'll receive notifications:</b>\n` +
+                intervals.map(i => `• ${formatInterval(i)}`).join('\n');
+
+        case 'task_created':
+            return `✅ <b>Task Created Successfully</b>\n\n` +
+                `<b>${data.title}</b>\n` +
+                `${data.description ? data.description + '\n' : ''}` +
+                `📅 Due: ${new Date(data.dueDate).toLocaleDateString()}${data.dueTime ? ' at ' + data.dueTime : ''}\n` +
+                `${data.priority ? `⚡ Priority: ${data.priority.charAt(0).toUpperCase() + data.priority.slice(1)}\n` : ''}\n` +
+                `🔔 <b>You'll receive reminders:</b>\n` +
+                `• 2 hours before\n` +
+                `• 15 minutes before\n` +
+                `• At due time`;
 
         default:
             return data.message || 'Notification from Finance Tracker';

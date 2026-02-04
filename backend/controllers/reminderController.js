@@ -1,4 +1,6 @@
 const Reminder = require('../models/Reminder');
+const User = require('../models/User');
+const { sendTelegramMessage, formatNotificationMessage } = require('../services/telegramService');
 
 // @desc    Get all reminders
 // @route   GET /api/reminders
@@ -21,6 +23,21 @@ const createReminder = async (req, res) => {
             user: req.user._id,
             ...req.body,
         });
+
+        // Send immediate acknowledgment notification
+        const user = await User.findById(req.user._id);
+        if (user.telegramEnabled && user.telegramChatId) {
+            const eventTimeStr = reminder.eventTime || reminder.reminderTime;
+            const message = formatNotificationMessage('reminder_created', {
+                title: reminder.title,
+                description: reminder.description,
+                date: reminder.reminderDate,
+                time: eventTimeStr,
+                intervals: reminder.notificationIntervals,
+            });
+            await sendTelegramMessage(user.telegramChatId, message);
+        }
+
         res.status(201).json(reminder);
     } catch (error) {
         res.status(400).json({ message: error.message });

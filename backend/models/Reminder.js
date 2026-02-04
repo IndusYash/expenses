@@ -52,7 +52,7 @@ const reminderSchema = new mongoose.Schema({
     },
     notificationIntervals: {
         type: [Number], // Array of minutes before event to send notifications
-        default: [360, 60, 0], // Default: 6 hours (360 min), 1 hour (60 min) before, and at event time (0 min)
+        default: [360, 120, 10, 0], // Default: 6 hours, 2 hours, 10 minutes before, and at event time
     },
     sentNotifications: [{
         interval: Number, // Which interval was sent (in minutes)

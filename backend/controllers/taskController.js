@@ -1,4 +1,6 @@
 const Task = require('../models/Task');
+const User = require('../models/User');
+const { sendTelegramMessage, formatNotificationMessage } = require('../services/telegramService');
 
 // @desc    Get all tasks
 // @route   GET /api/tasks
@@ -21,6 +23,20 @@ const createTask = async (req, res) => {
             user: req.user._id,
             ...req.body,
         });
+
+        // Send immediate acknowledgment notification
+        const user = await User.findById(req.user._id);
+        if (user.telegramEnabled && user.telegramChatId) {
+            const message = formatNotificationMessage('task_created', {
+                title: task.title,
+                description: task.description,
+                dueDate: task.dueDate,
+                dueTime: task.dueTime,
+                priority: task.priority,
+            });
+            await sendTelegramMessage(user.telegramChatId, message);
+        }
+
         res.status(201).json(task);
     } catch (error) {
         res.status(400).json({ message: error.message });
